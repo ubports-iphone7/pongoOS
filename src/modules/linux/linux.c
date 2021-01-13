@@ -284,11 +284,39 @@ void linux_prep_boot() {
     uint64_t image_size = loader_xfer_recv_count;
     gLinuxStage = (void*)alloc_contig(image_size+LINUX_DTREE_SIZE);
     size_t dest_size = 0x10000000;
+    
+    printf("kernel size = %llu\n", image_size);
+    hexprint(loader_xfer_recv_data, 0x200);
+    
     int res = unlzma_decompress((uint8_t *)gLinuxStage, &dest_size, loader_xfer_recv_data, image_size);
     if (res != SZ_OK) {
-	    puts("Assuming decompressed kernel.");
-	    image_size = *(uint64_t *)(loader_xfer_recv_data + 16);
-	    memcpy(gLinuxStage, loader_xfer_recv_data, image_size);
+    	static const char* errors[18] = {
+    		"SZ_OK",
+			"SZ_ERROR_DATA",
+			"SZ_ERROR_MEM",
+			"SZ_ERROR_CRC",
+			"SZ_ERROR_UNSUPPORTED",
+			"SZ_ERROR_PARAM",
+			"SZ_ERROR_INPUT_EOF",
+			"SZ_ERROR_OUTPUT_EOF",
+			"SZ_ERROR_READ",
+			"SZ_ERROR_WRITE",
+			"SZ_ERROR_PROGRESS",
+			"SZ_ERROR_FAIL",
+			"SZ_ERROR_THREAD",
+			"",
+			"",
+			"",
+			"SZ_ERROR_ARCHIVE",
+			"SZ_ERROR_NO_ARCHIVE"
+		};
+    	const char* err = res >= 0 && res < 7 ? errors[res] : "???";
+        printf("unlzma_decompress failed: %d %s\n", res, err);
+        return;
+        
+	    //puts("Assuming decompressed kernel.");
+	    //image_size = *(uint64_t *)(loader_xfer_recv_data + 16);
+	    //memcpy(gLinuxStage, loader_xfer_recv_data, image_size);
     }
     else {
 	    image_size = *(uint64_t *)(gLinuxStage + 16);
